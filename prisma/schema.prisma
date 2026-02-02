@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlanTier {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum ArticleStatus {
+  QUEUED
+  RESEARCHING
+  OUTLINING
+  WRITING
+  REVIEWING
+  PUBLISHED
+  FAILED
+}
+
+enum CreditTransactionType {
+  PURCHASE
+  USAGE
+  REFUND
+  BONUS
+}
+
+model User {
+  id                   String              @id @default(cuid())
+  email                String              @unique
+  name                 String?
+  planTier             PlanTier            @default(FREE)
+  creditsBalance       Int                 @default(0)
+  onboardingCompleted  Boolean             @default(false)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  subscription         Subscription?
+  articles             Article[]
+  brandVoices          BrandVoice[]
+  creditTransactions   CreditTransaction[]
+
+  @@map("users")
+}
+
+model Subscription {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  stripeCustomerId       String    @unique
+  stripeSubscriptionId   String    @unique
+  stripePriceId          String
+  stripeCurrentPeriodEnd DateTime
+  cancelAtPeriodEnd      Boolean   @default(false)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model Article {
+  id               String        @id @default(cuid())
+  userId           String
+  keyword          String
+  title            String?
+  slug             String?
+  status           ArticleStatus @default(QUEUED)
+  contentHtml      String?
+  contentMarkdown  String?
+  metaDescription  String?
+  wordCount        Int?
+  readabilityScore Float?
+  seoScore         Float?
+  brandVoiceId     String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brandVoice BrandVoice?       @relation(fields: [brandVoiceId], references: [id], onDelete: SetNull)
+  citations  ArticleCitation[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([keyword])
+  @@map("articles")
+}
+
+model BrandVoice {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  tone            String
+  pointOfView     String
+  exemplarContent String?
+  guidelines      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  articles Article[]
+
+  @@index([userId])
+  @@map("brand_voices")
+}
+
+model CreditTransaction {
+  id          String                @id @default(cuid())
+  userId      String
+  amount      Int
+  type        CreditTransactionType
+  referenceId String?
+  description String?
+  createdAt   DateTime              @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@map("credit_transactions")
+}
+
+model SerpCache {
+  id        String   @id @default(cuid())
+  keyword   String   @unique
+  results   Json
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([keyword])
+  @@index([expiresAt])
+  @@map("serp_cache")
+}
+
+model ArticleCitation {
+  id         String  @id @default(cuid())
+  articleId  String
+  claimText  String
+  sourceUrl  String
+  confidence Float
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@map("article_citations")
+}
