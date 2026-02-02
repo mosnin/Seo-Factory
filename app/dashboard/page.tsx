@@ -1,47 +1,53 @@
 import { prisma } from "@/lib/prisma";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { IconPlus } from "@/components/ui/icons";
+import { MetricCards } from "@/components/dashboard/metric-cards";
+import { RecentArticlesTable } from "@/components/dashboard/recent-articles-table";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const articleCount = await prisma.article.count();
-  const publishedCount = await prisma.article.count({
-    where: { status: "PUBLISHED" },
-  });
-
-  const stats = [
-    { label: "Total Articles", value: articleCount },
-    { label: "Published", value: publishedCount },
-    { label: "In Progress", value: articleCount - publishedCount },
-  ];
+  // Pre-fetch quick counts for SSR (visible while client hydrates)
+  const user = await prisma.user.findFirst();
+  const creditsBalance = user?.creditsBalance ?? 0;
 
   return (
     <div>
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Overview of your content pipeline.
-        </p>
+      {/* Header with Quick Action */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Overview of your content pipeline.
+          </p>
+        </div>
+        <a href="/dashboard/articles">
+          <Button>
+            <IconPlus className="mr-2 h-4 w-4" />
+            Generate New Article
+          </Button>
+        </a>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {stats.map((stat) => (
-          <Card key={stat.label}>
-            <CardHeader className="pb-2">
-              <p className="text-sm font-medium text-muted-foreground">
-                {stat.label}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{stat.value}</p>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Metric Cards (client component with React Query) */}
+      <div className="mt-6">
+        <MetricCards />
+      </div>
+
+      {/* Recent Articles Table */}
+      <div className="mt-8">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Recent Articles
+          </h2>
+          <a
+            href="/dashboard/articles"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            View all
+          </a>
+        </div>
+        <RecentArticlesTable />
       </div>
     </div>
   );
