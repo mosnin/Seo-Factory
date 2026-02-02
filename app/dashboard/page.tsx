@@ -21,7 +21,7 @@ export default async function DashboardPage() {
             Overview of your content pipeline.
           </p>
         </div>
-        <a href="/dashboard/articles">
+        <a href="/dashboard/articles/new">
           <Button>
             <IconPlus className="mr-2 h-4 w-4" />
             Generate New Article

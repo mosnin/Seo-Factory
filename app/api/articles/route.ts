@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { articleQueue, type ArticleJobData } from "@/lib/queue";
-import { ARTICLE_CREDIT_COST } from "@/lib/constants";
+import { LENGTH_PRESETS, type LengthPreset } from "@/lib/constants";
 
 const createArticleSchema = z.object({
   keyword: z
@@ -10,7 +10,8 @@ const createArticleSchema = z.object({
     .min(1, "Keyword is required")
     .max(200, "Keyword must be 200 characters or less"),
   brand_voice_id: z.string().optional(),
-  length: z.number().int().min(500).max(10000).default(1500),
+  length_preset: z.enum(["short", "medium", "long"]).default("medium"),
+  content_brief: z.string().max(500).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -25,7 +26,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { keyword, brand_voice_id, length } = parsed.data;
+    const { keyword, brand_voice_id, length_preset, content_brief } = parsed.data;
+    const preset = LENGTH_PRESETS[length_preset as LengthPreset];
+    const creditCost = preset.credits;
 
     // For now, use the first user (in production, extract from auth token)
     const user = await prisma.user.findFirst();
@@ -37,11 +40,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate credits
-    if (user.creditsBalance < ARTICLE_CREDIT_COST) {
+    if (user.creditsBalance < creditCost) {
       return NextResponse.json(
         {
           error: "Insufficient credits",
-          required: ARTICLE_CREDIT_COST,
+          required: creditCost,
           available: user.creditsBalance,
         },
         { status: 402 }
@@ -67,19 +70,19 @@ export async function POST(request: NextRequest) {
         data: {
           userId: user.id,
           keyword,
-          targetLength: length,
+          targetLength: preset.targetLength,
           brandVoiceId: brand_voice_id,
           status: "QUEUED",
         },
       }),
       prisma.user.update({
         where: { id: user.id },
-        data: { creditsBalance: { decrement: ARTICLE_CREDIT_COST } },
+        data: { creditsBalance: { decrement: creditCost } },
       }),
       prisma.creditTransaction.create({
         data: {
           userId: user.id,
-          amount: -ARTICLE_CREDIT_COST,
+          amount: -creditCost,
           type: "USAGE",
           description: `Article generation: ${keyword}`,
         },
@@ -92,7 +95,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       keyword,
       brandVoiceId: brand_voice_id,
-      targetLength: length,
+      targetLength: preset.targetLength,
     };
 
     await articleQueue.add(`article-${article.id}`, jobData);
@@ -102,7 +105,7 @@ export async function POST(request: NextRequest) {
         article_id: article.id,
         status: article.status,
         keyword: article.keyword,
-        credits_deducted: ARTICLE_CREDIT_COST,
+        credits_deducted: creditCost,
       },
       { status: 201 }
     );

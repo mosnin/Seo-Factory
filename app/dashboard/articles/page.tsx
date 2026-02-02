@@ -21,10 +21,12 @@ export default async function ArticlesPage() {
             Manage your generated content.
           </p>
         </div>
-        <Button>
-          <IconPlus className="mr-2 h-4 w-4" />
-          New Article
-        </Button>
+        <a href="/dashboard/articles/new">
+          <Button>
+            <IconPlus className="mr-2 h-4 w-4" />
+            New Article
+          </Button>
+        </a>
       </div>
 
       {articles.length === 0 ? (
