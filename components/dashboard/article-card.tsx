@@ -30,6 +30,7 @@ type ArticleStatus =
   | "WRITING"
   | "FACT_CHECKING"
   | "OPTIMIZING"
+  | "READY"
   | "REVIEWING"
   | "PUBLISHED"
   | "FAILED";
@@ -57,6 +58,7 @@ const statusConfig: Record<
   WRITING: { label: "Writing", variant: "warning" },
   FACT_CHECKING: { label: "Fact-Checking", variant: "warning" },
   OPTIMIZING: { label: "Optimizing", variant: "warning" },
+  READY: { label: "Ready", variant: "success" },
   REVIEWING: { label: "Reviewing", variant: "warning" },
   PUBLISHED: { label: "Published", variant: "success" },
   FAILED: { label: "Failed", variant: "destructive" },

@@ -21,6 +21,7 @@ enum ArticleStatus {
   WRITING
   FACT_CHECKING
   OPTIMIZING
+  READY
   REVIEWING
   PUBLISHED
   FAILED
@@ -85,6 +86,10 @@ model Article {
   readabilityScore Float?
   seoScore         Float?
   citationsCount   Int?
+  keywordDensity   Float?
+  eeatScore        Float?
+  schemaMarkupJson Json?
+  generationTimeSec Int?
   brandVoiceId     String?
   errorMessage     String?
   retryCount       Int           @default(0)

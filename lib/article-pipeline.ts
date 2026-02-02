@@ -4,11 +4,13 @@ import { prisma } from "./prisma";
 import { getSerpData } from "./serp";
 import { generateOutline } from "./claude";
 import { factCheckArticle } from "./fact-checker";
+import { optimizeArticle } from "./optimizer";
 import { ARTICLE_QUEUE_NAME, type ArticleJobData } from "./queue";
 import { ARTICLE_CREDIT_COST } from "./constants";
 
 async function processArticleJob(job: Job<ArticleJobData>): Promise<void> {
   const { articleId, userId, keyword, brandVoiceId, targetLength } = job.data;
+  const jobStartTime = new Date();
 
   try {
     // ── Stage 1: SERP Research ──────────────────────────────────────────
@@ -78,7 +80,20 @@ async function processArticleJob(job: Job<ArticleJobData>): Promise<void> {
         `${factCheckResult.unresolvedCount} need review`
     );
 
-    // factCheckArticle already sets status to OPTIMIZING on success
+    // factCheckArticle already sets status to OPTIMIZING
+
+    // ── Stage 5: Optimization ─────────────────────────────────────────────
+    const optimizationResult = await optimizeArticle(articleId, jobStartTime);
+
+    console.log(
+      `[article-worker] Optimization complete for ${keyword}: ` +
+        `SEO=${optimizationResult.seoScore}, ` +
+        `readability=${optimizationResult.readabilityScore}, ` +
+        `E-E-A-T=${optimizationResult.eeatScore}, ` +
+        `${optimizationResult.generationTimeSec}s total`
+    );
+
+    // optimizeArticle sets status to READY
   } catch (error) {
     const attempt = (job.attemptsMade ?? 0) + 1;
     const maxAttempts = job.opts?.attempts ?? 3;

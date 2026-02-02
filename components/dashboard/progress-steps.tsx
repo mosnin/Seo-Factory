@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { IconCheck, IconLoader, IconSearch, IconFileText } from "@/components/ui/icons";
 
-type Stage = "RESEARCHING" | "OUTLINING" | "WRITING" | "FACT_CHECKING" | "OPTIMIZING" | "REVIEWING";
+type Stage = "RESEARCHING" | "OUTLINING" | "WRITING" | "FACT_CHECKING" | "OPTIMIZING" | "READY" | "REVIEWING";
 
 interface Step {
   key: Stage;
@@ -15,6 +15,7 @@ const steps: Step[] = [
   { key: "WRITING", label: "Draft", icon: <IconPenLine /> },
   { key: "FACT_CHECKING", label: "Fact-Check", icon: <IconFactCheck /> },
   { key: "OPTIMIZING", label: "Optimize", icon: <IconOptimize /> },
+  { key: "READY", label: "Ready", icon: <IconReady /> },
   { key: "REVIEWING", label: "Review", icon: <IconReview /> },
 ];
 
@@ -24,7 +25,8 @@ const stageOrder: Record<Stage, number> = {
   WRITING: 2,
   FACT_CHECKING: 3,
   OPTIMIZING: 4,
-  REVIEWING: 5,
+  READY: 5,
+  REVIEWING: 6,
 };
 
 interface ProgressStepsProps {
@@ -81,7 +83,7 @@ export function ProgressSteps({ currentStage, className }: ProgressStepsProps) {
             {i < steps.length - 1 && (
               <div
                 className={cn(
-                  "mb-5 h-0.5 w-8 sm:w-12",
+                  "mb-5 h-0.5 w-6 sm:w-10",
                   i < currentIndex ? "bg-success" : "bg-muted",
                 )}
               />
@@ -116,6 +118,15 @@ function IconOptimize() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
       <path d="M12 3v5" /><path d="m9 10 3-2 3 2" /><path d="M12 22v-5" /><path d="m9 14 3 2 3-2" /><path d="M3 12h5" /><path d="m10 15-2-3 2-3" /><path d="M22 12h-5" /><path d="m14 9 2 3-2 3" />
+    </svg>
+  );
+}
+
+function IconReady() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
     </svg>
   );
 }
