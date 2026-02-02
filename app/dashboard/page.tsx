@@ -1,4 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
@@ -8,32 +14,34 @@ export default async function DashboardPage() {
     where: { status: "PUBLISHED" },
   });
 
+  const stats = [
+    { label: "Total Articles", value: articleCount },
+    { label: "Published", value: publishedCount },
+    { label: "In Progress", value: articleCount - publishedCount },
+  ];
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-      <p className="mt-1 text-sm text-gray-600">
-        Overview of your content pipeline.
-      </p>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Overview of your content pipeline.
+        </p>
+      </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-500">Total Articles</p>
-          <p className="mt-1 text-3xl font-bold text-gray-900">
-            {articleCount}
-          </p>
-        </div>
-        <div className="rounded-lg border bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-500">Published</p>
-          <p className="mt-1 text-3xl font-bold text-gray-900">
-            {publishedCount}
-          </p>
-        </div>
-        <div className="rounded-lg border bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-500">In Progress</p>
-          <p className="mt-1 text-3xl font-bold text-gray-900">
-            {articleCount - publishedCount}
-          </p>
-        </div>
+        {stats.map((stat) => (
+          <Card key={stat.label}>
+            <CardHeader className="pb-2">
+              <p className="text-sm font-medium text-muted-foreground">
+                {stat.label}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{stat.value}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );
