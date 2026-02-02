@@ -17,6 +17,7 @@ async function main() {
   // Create test user
   const user = await prisma.user.create({
     data: {
+      cognitoSub: "00000000-0000-0000-0000-000000000000",
       email: "test@seofactory.dev",
       name: "Test User",
       planTier: PlanTier.PRO,

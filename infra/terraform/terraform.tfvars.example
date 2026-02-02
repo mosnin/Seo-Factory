@@ -1,0 +1,11 @@
+project_name = "seo-factory"
+environment  = "dev"
+aws_region   = "us-east-1"
+database_url = "postgresql://user:password@your-rds-host:5432/seo_factory?schema=public"
+database_ssl = true
+
+# Uncomment if Lambda needs VPC access to reach an RDS instance:
+# lambda_vpc_config = {
+#   subnet_ids         = ["subnet-abc123", "subnet-def456"]
+#   security_group_ids = ["sg-abc123"]
+# }
