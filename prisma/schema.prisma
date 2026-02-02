@@ -73,6 +73,9 @@ model Article {
   title            String?
   slug             String?
   status           ArticleStatus @default(QUEUED)
+  outlineJson      Json?
+  serpDataJson     Json?
+  targetLength     Int           @default(1500)
   contentHtml      String?
   contentMarkdown  String?
   metaDescription  String?
@@ -80,6 +83,8 @@ model Article {
   readabilityScore Float?
   seoScore         Float?
   brandVoiceId     String?
+  errorMessage     String?
+  retryCount       Int           @default(0)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
