@@ -28,6 +28,8 @@ type ArticleStatus =
   | "RESEARCHING"
   | "OUTLINING"
   | "WRITING"
+  | "FACT_CHECKING"
+  | "OPTIMIZING"
   | "REVIEWING"
   | "PUBLISHED"
   | "FAILED";
@@ -53,6 +55,8 @@ const statusConfig: Record<
   RESEARCHING: { label: "Researching", variant: "outline" },
   OUTLINING: { label: "Outlining", variant: "outline" },
   WRITING: { label: "Writing", variant: "warning" },
+  FACT_CHECKING: { label: "Fact-Checking", variant: "warning" },
+  OPTIMIZING: { label: "Optimizing", variant: "warning" },
   REVIEWING: { label: "Reviewing", variant: "warning" },
   PUBLISHED: { label: "Published", variant: "success" },
   FAILED: { label: "Failed", variant: "destructive" },

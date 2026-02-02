@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { IconCheck, IconLoader, IconSearch, IconFileText } from "@/components/ui/icons";
 
-type Stage = "RESEARCHING" | "OUTLINING" | "WRITING" | "REVIEWING";
+type Stage = "RESEARCHING" | "OUTLINING" | "WRITING" | "FACT_CHECKING" | "OPTIMIZING" | "REVIEWING";
 
 interface Step {
   key: Stage;
@@ -13,14 +13,18 @@ const steps: Step[] = [
   { key: "RESEARCHING", label: "Research", icon: <IconSearch className="h-4 w-4" /> },
   { key: "OUTLINING", label: "Outline", icon: <IconFileText className="h-4 w-4" /> },
   { key: "WRITING", label: "Draft", icon: <IconPenLine /> },
-  { key: "REVIEWING", label: "Optimize", icon: <IconOptimize /> },
+  { key: "FACT_CHECKING", label: "Fact-Check", icon: <IconFactCheck /> },
+  { key: "OPTIMIZING", label: "Optimize", icon: <IconOptimize /> },
+  { key: "REVIEWING", label: "Review", icon: <IconReview /> },
 ];
 
 const stageOrder: Record<Stage, number> = {
   RESEARCHING: 0,
   OUTLINING: 1,
   WRITING: 2,
-  REVIEWING: 3,
+  FACT_CHECKING: 3,
+  OPTIMIZING: 4,
+  REVIEWING: 5,
 };
 
 interface ProgressStepsProps {
@@ -77,7 +81,7 @@ export function ProgressSteps({ currentStage, className }: ProgressStepsProps) {
             {i < steps.length - 1 && (
               <div
                 className={cn(
-                  "mb-5 h-0.5 w-12 sm:w-16",
+                  "mb-5 h-0.5 w-8 sm:w-12",
                   i < currentIndex ? "bg-success" : "bg-muted",
                 )}
               />
@@ -99,10 +103,28 @@ function IconPenLine() {
   );
 }
 
+function IconFactCheck() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
 function IconOptimize() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
       <path d="M12 3v5" /><path d="m9 10 3-2 3 2" /><path d="M12 22v-5" /><path d="m9 14 3 2 3-2" /><path d="M3 12h5" /><path d="m10 15-2-3 2-3" /><path d="M22 12h-5" /><path d="m14 9 2 3-2 3" />
+    </svg>
+  );
+}
+
+function IconReview() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
     </svg>
   );
 }

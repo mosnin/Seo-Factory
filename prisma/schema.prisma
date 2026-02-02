@@ -19,6 +19,8 @@ enum ArticleStatus {
   RESEARCHING
   OUTLINING
   WRITING
+  FACT_CHECKING
+  OPTIMIZING
   REVIEWING
   PUBLISHED
   FAILED
@@ -82,6 +84,7 @@ model Article {
   wordCount        Int?
   readabilityScore Float?
   seoScore         Float?
+  citationsCount   Int?
   brandVoiceId     String?
   errorMessage     String?
   retryCount       Int           @default(0)
@@ -145,11 +148,13 @@ model SerpCache {
 }
 
 model ArticleCitation {
-  id         String  @id @default(cuid())
-  articleId  String
-  claimText  String
-  sourceUrl  String
-  confidence Float
+  id          String  @id @default(cuid())
+  articleId   String
+  claimText   String
+  sourceUrl   String
+  sourceTitle String?
+  confidence  Float
+  needsReview Boolean @default(false)
 
   article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
 

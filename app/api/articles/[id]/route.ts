@@ -36,6 +36,7 @@ export async function GET(
       word_count: article.wordCount,
       readability_score: article.readabilityScore,
       seo_score: article.seoScore,
+      citations_count: article.citationsCount,
       brand_voice: article.brandVoice,
       citations: article.citations,
       error_message: article.errorMessage,

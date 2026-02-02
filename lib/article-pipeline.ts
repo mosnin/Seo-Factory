@@ -3,6 +3,7 @@ import { redis } from "./redis";
 import { prisma } from "./prisma";
 import { getSerpData } from "./serp";
 import { generateOutline } from "./claude";
+import { factCheckArticle } from "./fact-checker";
 import { ARTICLE_QUEUE_NAME, type ArticleJobData } from "./queue";
 import { ARTICLE_CREDIT_COST } from "./constants";
 
@@ -57,6 +58,27 @@ async function processArticleJob(job: Job<ArticleJobData>): Promise<void> {
         status: "WRITING",
       },
     });
+
+    // ── Stage 3: (Draft writing would happen here — placeholder) ────────
+    // The WRITING stage is handled externally or by a future stage.
+    // Once content is written and contains [^citation_needed] markers,
+    // the fact-checking stage processes them.
+
+    // ── Stage 4: Fact-Checking ────────────────────────────────────────────
+    await prisma.article.update({
+      where: { id: articleId },
+      data: { status: "FACT_CHECKING" },
+    });
+
+    const factCheckResult = await factCheckArticle(articleId);
+
+    console.log(
+      `[article-worker] Fact-check complete for ${keyword}: ` +
+        `${factCheckResult.citations.length} verified, ` +
+        `${factCheckResult.unresolvedCount} need review`
+    );
+
+    // factCheckArticle already sets status to OPTIMIZING on success
   } catch (error) {
     const attempt = (job.attemptsMade ?? 0) + 1;
     const maxAttempts = job.opts?.attempts ?? 3;
