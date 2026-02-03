@@ -8,6 +8,7 @@ import {
   PRICE_TO_PLAN,
   PRICE_TO_CREDITS,
 } from "@/lib/constants";
+import { queueEmail } from "@/lib/email";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -195,14 +196,36 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  // Log for now — in production, send email notification
   const customerId =
     typeof invoice.customer === "string"
       ? invoice.customer
       : invoice.customer?.id;
+
   console.error(
     `[Stripe] Payment failed for customer ${customerId}, invoice ${invoice.id}`
   );
+
+  if (!customerId) return;
+
+  const sub = await prisma.subscription.findFirst({
+    where: { stripeCustomerId: customerId },
+    include: { user: { select: { id: true, email: true } } },
+  });
+
+  if (sub) {
+    await queueEmail({
+      template: "payment-failed",
+      userId: sub.user.id,
+      to: sub.user.email,
+      referenceId: invoice.id,
+      data: { invoiceId: invoice.id },
+    }).catch((err) =>
+      console.error(
+        "[Stripe Webhook] Failed to queue payment-failed email:",
+        err
+      )
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {

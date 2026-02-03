@@ -49,6 +49,7 @@ model User {
   articles             Article[]
   brandVoices          BrandVoice[]
   creditTransactions   CreditTransaction[]
+  emailLogs            EmailLog[]
 
   @@map("users")
 }
@@ -168,4 +169,20 @@ model ArticleCitation {
 
   @@index([articleId])
   @@map("article_citations")
+}
+
+model EmailLog {
+  id          String   @id @default(cuid())
+  userId      String
+  template    String
+  subject     String
+  referenceId String?
+  sentAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, template, referenceId])
+  @@index([userId])
+  @@index([template])
+  @@map("email_logs")
 }

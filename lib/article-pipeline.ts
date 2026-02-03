@@ -7,6 +7,7 @@ import { factCheckArticle } from "./fact-checker";
 import { optimizeArticle } from "./optimizer";
 import { ARTICLE_QUEUE_NAME, type ArticleJobData } from "./queue";
 import { ARTICLE_CREDIT_COST } from "./constants";
+import { queueEmail } from "./email";
 
 async function processArticleJob(job: Job<ArticleJobData>): Promise<void> {
   const { articleId, userId, keyword, brandVoiceId, targetLength } = job.data;
@@ -94,6 +95,41 @@ async function processArticleJob(job: Job<ArticleJobData>): Promise<void> {
     );
 
     // optimizeArticle sets status to READY
+
+    // ── Send "article ready" email ──────────────────────────────────────
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, creditsBalance: true },
+    });
+    if (user) {
+      await queueEmail({
+        template: "article-ready",
+        userId,
+        to: user.email,
+        referenceId: articleId,
+        data: {
+          keyword,
+          articleId,
+          seoScore: optimizationResult.seoScore,
+          wordCount: optimizationResult.wordCount ?? null,
+        },
+      }).catch((err) =>
+        console.error("[article-worker] Failed to queue article-ready email:", err)
+      );
+
+      // Check for low credits and send warning if below threshold
+      if (user.creditsBalance < 10) {
+        await queueEmail({
+          template: "low-credits",
+          userId,
+          to: user.email,
+          referenceId: `low-credits-${user.creditsBalance}`,
+          data: { currentBalance: user.creditsBalance },
+        }).catch((err) =>
+          console.error("[article-worker] Failed to queue low-credits email:", err)
+        );
+      }
+    }
   } catch (error) {
     const attempt = (job.attemptsMade ?? 0) + 1;
     const maxAttempts = job.opts?.attempts ?? 3;

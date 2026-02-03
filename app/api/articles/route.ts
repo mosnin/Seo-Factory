@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { articleQueue, type ArticleJobData } from "@/lib/queue";
 import { LENGTH_PRESETS, type LengthPreset } from "@/lib/constants";
+import { queueEmail } from "@/lib/email";
 
 const createArticleSchema = z.object({
   keyword: z
@@ -99,6 +100,20 @@ export async function POST(request: NextRequest) {
     };
 
     await articleQueue.add(`article-${article.id}`, jobData);
+
+    // Check for low credits after deduction and queue warning email
+    const newBalance = user.creditsBalance - creditCost;
+    if (newBalance < 10 && newBalance >= 0) {
+      queueEmail({
+        template: "low-credits",
+        userId: user.id,
+        to: user.email,
+        referenceId: `low-credits-${newBalance}`,
+        data: { currentBalance: newBalance },
+      }).catch((err) =>
+        console.error("[POST /api/articles] Failed to queue low-credits email:", err)
+      );
+    }
 
     return NextResponse.json(
       {
