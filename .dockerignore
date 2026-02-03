@@ -1,0 +1,54 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Development
+.env*.local
+.env.development
+.env.test
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Infrastructure
+infrastructure/
+.terraform/
+*.tfstate*
+*.tfvars
+
+# Documentation
+*.md
+docs/
+
+# Tests
+__tests__
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage/
+.nyc_output
+
+# Misc
+.DS_Store
+*.log
+*.tmp
+.turbo
