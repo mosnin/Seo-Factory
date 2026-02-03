@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { IconPlus } from "@/components/ui/icons";
 import { MetricCards } from "@/components/dashboard/metric-cards";
 import { RecentArticlesTable } from "@/components/dashboard/recent-articles-table";
+import { OnboardingWrapper } from "@/components/onboarding/onboarding-wrapper";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,9 @@ export default async function DashboardPage() {
 
   return (
     <div>
+      {/* Onboarding modal (shows when onboarding not completed) */}
+      <OnboardingWrapper />
+
       {/* Header with Quick Action */}
       <div className="flex items-center justify-between">
         <div>
