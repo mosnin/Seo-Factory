@@ -1,63 +1,44 @@
-# SEO Factory - AWS Deployment Guide
+# SEO Factory - Railway Deployment Guide
 
-This guide covers deploying SEO Factory to AWS using ECS Fargate, RDS PostgreSQL, and ElastiCache Redis.
+This guide covers deploying SEO Factory to Railway with PostgreSQL and Redis.
 
 ## Architecture Overview
 
 ```
-                                    ┌─────────────────────────────────────────────────────────────┐
-                                    │                         AWS Cloud                           │
-                                    │                                                             │
-    ┌──────────┐                    │  ┌─────────────┐      ┌─────────────────────────────────┐  │
-    │  Users   │───────────────────────▶│     ALB     │─────▶│         ECS Fargate            │  │
-    └──────────┘                    │  │  (HTTPS)    │      │  ┌─────────┐  ┌─────────┐       │  │
-                                    │  └─────────────┘      │  │ Task 1  │  │ Task 2  │  ...  │  │
-                                    │        │              │  └────┬────┘  └────┬────┘       │  │
-                                    │        │              └───────┼────────────┼────────────┘  │
-                                    │        │                      │            │               │
-                                    │  ┌─────▼─────┐         ┌──────▼────────────▼──────┐       │
-                                    │  │    WAF    │         │                          │       │
-                                    │  └───────────┘         │   ┌──────────────────┐   │       │
-                                    │                        │   │   RDS Postgres   │   │       │
-                                    │                        │   └──────────────────┘   │       │
-                                    │  ┌───────────┐         │                          │       │
-                                    │  │    S3     │         │   ┌──────────────────┐   │       │
-                                    │  │ (uploads) │         │   │ ElastiCache Redis│   │       │
-                                    │  └───────────┘         │   └──────────────────┘   │       │
-                                    │        │               │                          │       │
-                                    │  ┌─────▼─────┐         └──────────────────────────┘       │
-                                    │  │CloudFront │              Private Subnets               │
-                                    │  │   (CDN)   │                                             │
-                                    │  └───────────┘                                             │
-                                    └─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Railway Platform                                │
+│                                                                             │
+│  ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐           │
+│  │   Next.js App   │   │   PostgreSQL    │   │     Redis       │           │
+│  │   (Container)   │◄──│   (Database)    │   │   (Queue/Cache) │           │
+│  └────────┬────────┘   └─────────────────┘   └─────────────────┘           │
+│           │                                                                 │
+└───────────┼─────────────────────────────────────────────────────────────────┘
+            │
+    ┌───────▼───────┐
+    │    Users      │
+    └───────────────┘
+
+External Services:
+- Clerk (Authentication)
+- Resend (Email)
+- Vercel Blob (File Storage)
+- Stripe (Payments)
+- Claude API (AI Content)
 ```
 
 ## Prerequisites
 
 Before deploying, ensure you have:
 
-1. **AWS CLI** (v2.x) - [Install Guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-2. **Terraform** (v1.5+) - [Install Guide](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
-3. **Docker** (v24+) - [Install Guide](https://docs.docker.com/get-docker/)
-4. **Node.js** (v20+) - For local development
-5. **AWS Account** with appropriate permissions
+1. **Railway Account** - [Sign up](https://railway.app)
+2. **Clerk Account** - [Sign up](https://clerk.dev)
+3. **Resend Account** - [Sign up](https://resend.com)
+4. **Stripe Account** - [Sign up](https://stripe.com)
+5. **Anthropic API Key** - [Get API Key](https://console.anthropic.com)
+6. **Node.js** (v20+) - For local development
 
-### Required AWS Permissions
-
-Your AWS IAM user/role needs permissions for:
-- VPC, Subnets, Security Groups, NAT Gateway
-- ECS, ECR
-- RDS, ElastiCache
-- ALB, WAF
-- S3, CloudFront
-- Cognito
-- Secrets Manager
-- CloudWatch
-- IAM (for creating roles)
-- ACM (for SSL certificates)
-- SES (for email)
-
-## Local Development with Docker
+## Local Development
 
 ### Quick Start
 
@@ -66,9 +47,28 @@ Your AWS IAM user/role needs permissions for:
 git clone https://github.com/your-org/seo-factory.git
 cd seo-factory
 
+# Install dependencies
+npm install
+
 # Copy environment file
 cp .env.example .env.local
 
+# Fill in your environment variables
+# (See Environment Variables section below)
+
+# Start PostgreSQL and Redis with Docker
+docker-compose up -d db redis
+
+# Run database migrations
+npx prisma migrate dev
+
+# Start development server
+npm run dev
+```
+
+### Docker Compose (Full Stack)
+
+```bash
 # Start all services
 docker-compose up -d
 
@@ -77,326 +77,302 @@ docker-compose exec app npx prisma migrate deploy
 
 # View logs
 docker-compose logs -f app
-```
 
-### Accessing Services
-
-- **Application**: http://localhost:3000
-- **PostgreSQL**: localhost:5432
-- **Redis**: localhost:6379
-
-### Stopping Services
-
-```bash
+# Stop services
 docker-compose down
-
-# To remove volumes (data):
-docker-compose down -v
 ```
 
-## AWS Deployment
+## Railway Deployment
 
-### Step 1: Configure AWS CLI
+### Step 1: Create Railway Project
 
+1. Go to [railway.app](https://railway.app) and create a new project
+2. Choose "Empty Project"
+
+### Step 2: Add PostgreSQL
+
+1. Click "Add Service" → "Database" → "PostgreSQL"
+2. Railway will automatically provision a PostgreSQL instance
+3. Copy the `DATABASE_URL` from the service variables
+
+### Step 3: Add Redis
+
+1. Click "Add Service" → "Database" → "Redis"
+2. Railway will automatically provision a Redis instance
+3. Copy the `REDIS_URL` from the service variables
+
+### Step 4: Deploy the Application
+
+**Option A: Deploy from GitHub**
+1. Click "Add Service" → "GitHub Repo"
+2. Select your repository
+3. Railway will automatically detect Next.js and set up the build
+
+**Option B: Deploy using Railway CLI**
 ```bash
-aws configure
-# Enter your AWS Access Key ID, Secret Access Key, and region
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login to Railway
+railway login
+
+# Link to your project
+railway link
+
+# Deploy
+railway up
 ```
 
-### Step 2: Set Up Terraform Variables
+### Step 5: Configure Environment Variables
+
+In your Railway project, add these environment variables:
 
 ```bash
-cd infrastructure
+# Database (auto-populated by Railway)
+DATABASE_URL=
 
-# Copy example variables
-cp terraform.tfvars.example terraform.tfvars
+# Redis (auto-populated by Railway)
+REDIS_URL=
 
-# Edit with your values
-nano terraform.tfvars
-```
+# Application
+NODE_ENV=production
+NEXT_PUBLIC_APP_URL=https://your-app.railway.app
 
-### Step 3: Set Sensitive Variables
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
+CLERK_SECRET_KEY=sk_live_...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/auth/signin
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/auth/signup
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
 
-Export sensitive variables (don't commit these):
+# Resend Email
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=noreply@yourdomain.com
 
-```bash
-export TF_VAR_nextauth_secret="$(openssl rand -base64 32)"
-export TF_VAR_claude_api_key="your-claude-api-key"
-export TF_VAR_stripe_secret_key="sk_live_..."
-export TF_VAR_stripe_webhook_secret="whsec_..."
-```
+# Stripe
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
 
-### Step 4: Initialize and Apply Terraform
+# Claude AI
+CLAUDE_API_KEY=sk-ant-...
 
-```bash
-# Initialize Terraform
-terraform init
+# File Storage (Vercel Blob)
+BLOB_READ_WRITE_TOKEN=vercel_blob_...
 
-# Preview changes
-terraform plan
-
-# Apply infrastructure
-terraform apply
-```
-
-This creates:
-- VPC with public/private subnets
-- ECS cluster with Fargate
-- RDS PostgreSQL instance
-- ElastiCache Redis cluster
-- Application Load Balancer with WAF
-- S3 buckets for uploads/exports
-- CloudFront CDN
-- Cognito User Pool
-- All necessary security groups and IAM roles
-
-### Step 5: Build and Push Docker Image
-
-```bash
-# Get ECR login
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
-
-# Build image
-docker build -t seo-factory .
-
-# Tag image
-docker tag seo-factory:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/seo-factory-prod:latest
-
-# Push to ECR
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/seo-factory-prod:latest
+# Admin
+ADMIN_EMAILS=admin@yourdomain.com
 ```
 
 ### Step 6: Run Database Migrations
 
 ```bash
-# Get ECS task ARN
-TASK_ARN=$(aws ecs list-tasks --cluster seo-factory-cluster-prod --service-name seo-factory-service-prod --query 'taskArns[0]' --output text)
+# Using Railway CLI
+railway run npx prisma migrate deploy
 
-# Run migrations
-aws ecs execute-command \
-  --cluster seo-factory-cluster-prod \
-  --task $TASK_ARN \
-  --container seo-factory-app \
-  --interactive \
-  --command "npx prisma migrate deploy"
+# Or via Railway dashboard shell
+npx prisma migrate deploy
 ```
 
-### Step 7: Configure DNS
+### Step 7: Set Up Custom Domain (Optional)
 
-Point your domain to the ALB:
+1. Go to your Railway service settings
+2. Click "Settings" → "Domains"
+3. Add your custom domain
+4. Update DNS records as instructed
 
-```bash
-# Get ALB DNS name
-terraform output alb_dns_name
+### Step 8: Configure Webhooks
+
+**Stripe Webhook:**
+1. Go to Stripe Dashboard → Developers → Webhooks
+2. Add endpoint: `https://your-app.railway.app/api/webhooks/stripe`
+3. Select events: `invoice.payment_failed`, `customer.subscription.*`
+4. Copy the webhook secret to `STRIPE_WEBHOOK_SECRET`
+
+**Clerk Webhook (optional):**
+1. Go to Clerk Dashboard → Webhooks
+2. Add endpoint: `https://your-app.railway.app/api/webhooks/clerk`
+3. Select events: `user.created`, `user.deleted`
+
+## GitHub Actions CI/CD
+
+Create `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run type check
+        run: npx tsc --noEmit
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        run: railway up --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 ```
 
-Create a CNAME or ALIAS record in your DNS provider pointing to the ALB DNS name.
-
-### Step 8: Verify Deployment
-
-```bash
-# Check service status
-aws ecs describe-services \
-  --cluster seo-factory-cluster-prod \
-  --services seo-factory-service-prod
-
-# Check health endpoint
-curl https://your-domain.com/api/health
-```
-
-## CI/CD with GitHub Actions
-
-### Configure GitHub Secrets
-
-Add these secrets in your GitHub repository settings:
-
-| Secret | Description |
-|--------|-------------|
-| `AWS_ACCESS_KEY_ID` | AWS IAM access key |
-| `AWS_SECRET_ACCESS_KEY` | AWS IAM secret key |
-| `DOMAIN_NAME` | Your production domain |
-
-### Automatic Deployments
-
-Pushing to `main` branch triggers:
-1. **Test**: Runs linter, type check, and tests
-2. **Build**: Builds Docker image and pushes to ECR
-3. **Deploy**: Updates ECS service with new image
-4. **Migrate**: Runs database migrations
-
-### Manual Deployment
-
-You can also trigger deployments manually via GitHub Actions UI.
+Add `RAILWAY_TOKEN` to your GitHub repository secrets.
 
 ## Rollback Procedure
 
-### Quick Rollback (ECS)
+### Quick Rollback
 
-```bash
-# Get current task definition
-CURRENT=$(aws ecs describe-services \
-  --cluster seo-factory-cluster-prod \
-  --services seo-factory-service-prod \
-  --query 'services[0].taskDefinition' \
-  --output text)
-
-# Extract revision number and decrement
-FAMILY=$(echo $CURRENT | cut -d':' -f1 | rev | cut -d'/' -f1 | rev)
-REVISION=$(echo $CURRENT | cut -d':' -f2)
-PREV_REVISION=$((REVISION - 1))
-
-# Rollback to previous version
-aws ecs update-service \
-  --cluster seo-factory-cluster-prod \
-  --service seo-factory-service-prod \
-  --task-definition $FAMILY:$PREV_REVISION \
-  --force-new-deployment
-```
+1. Go to Railway Dashboard
+2. Select your service
+3. Click "Deployments"
+4. Find the previous working deployment
+5. Click "Rollback"
 
 ### Database Rollback
 
-**Warning**: Database rollbacks can cause data loss. Always backup first!
-
 ```bash
-# Create backup before any migration
-aws rds create-db-snapshot \
-  --db-instance-identifier seo-factory-db-prod \
-  --db-snapshot-identifier pre-migration-$(date +%Y%m%d%H%M%S)
+# Connect to Railway shell
+railway run bash
 
-# If needed, restore from snapshot
-aws rds restore-db-instance-from-db-snapshot \
-  --db-instance-identifier seo-factory-db-prod-restored \
-  --db-snapshot-identifier <snapshot-id>
+# View migration history
+npx prisma migrate status
+
+# If needed, manually rollback (be careful!)
+npx prisma migrate resolve --rolled-back <migration_name>
 ```
 
 ## Monitoring
 
-### CloudWatch Logs
+### Railway Metrics
+
+Railway provides built-in monitoring:
+- CPU/Memory usage
+- Request count
+- Response times
+- Error rates
+
+Access via: Railway Dashboard → Your Service → Metrics
+
+### Logs
 
 ```bash
-# View application logs
-aws logs tail /ecs/seo-factory-prod --follow
+# View logs via CLI
+railway logs
 
-# Filter for errors
-aws logs filter-log-events \
-  --log-group-name /ecs/seo-factory-prod \
-  --filter-pattern "ERROR"
+# Or use the dashboard
+# Railway Dashboard → Your Service → Logs
 ```
 
-### CloudWatch Metrics
+### Health Check
 
-Key metrics to monitor:
-- **ECS**: CPU/Memory utilization, running task count
-- **RDS**: CPU, connections, storage
-- **ElastiCache**: CPU, memory, connections
-- **ALB**: Request count, latency, 5xx errors
+The app exposes `/api/health` for health monitoring:
 
-### Alerts
-
-SNS topic `seo-factory-alerts-prod` receives:
-- Redis high CPU/memory alerts
-- ECS task failures
-- RDS performance issues
-
-Subscribe your email:
 ```bash
-aws sns subscribe \
-  --topic-arn arn:aws:sns:us-east-1:<account-id>:seo-factory-alerts-prod \
-  --protocol email \
-  --notification-endpoint your-email@example.com
+curl https://your-app.railway.app/api/health
 ```
 
 ## Scaling
 
-### Manual Scaling
+Railway automatically scales based on usage. To configure:
 
-```bash
-# Scale ECS tasks
-aws ecs update-service \
-  --cluster seo-factory-cluster-prod \
-  --service seo-factory-service-prod \
-  --desired-count 5
-```
+1. Go to Railway Dashboard → Your Service → Settings
+2. Adjust:
+   - **Memory**: 512MB - 8GB
+   - **vCPU**: 0.5 - 8 cores
+   - **Replicas**: 1 - 10 instances
 
-### Auto Scaling
+## Cost Estimate
 
-Auto scaling is configured by default:
-- **CPU Target**: 70% utilization
-- **Memory Target**: 80% utilization
-- **Min Tasks**: 1
-- **Max Tasks**: 10
-
-Modify in `infrastructure/ecs.tf` to adjust.
-
-## Costs Estimate
-
-Estimated monthly costs (us-east-1, minimal setup):
+Railway pricing (usage-based):
 
 | Resource | Configuration | Est. Cost |
 |----------|---------------|-----------|
-| ECS Fargate | 2 tasks × 0.5 vCPU × 1GB | ~$30 |
-| RDS PostgreSQL | db.t3.micro | ~$15 |
-| ElastiCache Redis | cache.t3.micro | ~$12 |
-| ALB | 1 LCU average | ~$20 |
-| NAT Gateway | 2 AZs | ~$65 |
-| S3/CloudFront | 10GB storage, 100GB transfer | ~$5 |
-| **Total** | | **~$150/month** |
+| App Container | 1GB RAM, 1 vCPU | ~$10-20/month |
+| PostgreSQL | 1GB RAM | ~$10/month |
+| Redis | 256MB | ~$5/month |
+| **Total** | | **~$25-35/month** |
 
-Production recommendations:
-- Use Reserved Instances for RDS (up to 60% savings)
-- Use Savings Plans for Fargate (up to 50% savings)
-- Consider single NAT Gateway for dev/staging
+External services:
+- Clerk: Free tier (10,000 MAU)
+- Resend: Free tier (3,000 emails/month)
+- Vercel Blob: ~$0.15/GB stored
+- Stripe: 2.9% + $0.30 per transaction
 
 ## Troubleshooting
 
-### ECS Tasks Not Starting
+### Build Failures
 
 ```bash
-# Check stopped tasks
-aws ecs describe-tasks \
-  --cluster seo-factory-cluster-prod \
-  --tasks $(aws ecs list-tasks --cluster seo-factory-cluster-prod --desired-status STOPPED --query 'taskArns[0]' --output text)
+# Check build logs
+railway logs --build
 
 # Common issues:
-# - Image not found: Check ECR repository
-# - Health check failing: Check /api/health endpoint
-# - Memory issues: Increase task memory
+# - Missing environment variables
+# - Node version mismatch (ensure engines in package.json)
+# - Prisma schema out of sync
 ```
 
 ### Database Connection Issues
 
 ```bash
-# Test connectivity from ECS
-aws ecs execute-command \
-  --cluster seo-factory-cluster-prod \
-  --task $TASK_ARN \
-  --container seo-factory-app \
-  --interactive \
-  --command "nc -zv <rds-endpoint> 5432"
+# Test connection
+railway run npx prisma db execute --stdin <<< "SELECT 1"
+
+# Check DATABASE_URL is set correctly
+railway variables
 ```
 
 ### Application Errors
 
 ```bash
-# Get recent errors
-aws logs filter-log-events \
-  --log-group-name /ecs/seo-factory-prod \
-  --start-time $(date -d '1 hour ago' +%s)000 \
-  --filter-pattern "ERROR"
+# View runtime logs
+railway logs
+
+# Filter for errors
+railway logs | grep -i error
 ```
 
 ## Security Best Practices
 
-1. **Secrets Management**: All secrets stored in AWS Secrets Manager
-2. **Network Isolation**: RDS/Redis in private subnets with no public access
-3. **Encryption**: TLS for all connections, S3 encryption at rest
-4. **WAF**: AWS WAF protects against common attacks
-5. **IAM**: Least privilege access for all roles
-6. **Audit Logging**: CloudTrail enabled for API auditing
+1. **Environment Variables**: Never commit secrets to git
+2. **Database**: Railway PostgreSQL is private by default
+3. **HTTPS**: Railway provides automatic SSL
+4. **Authentication**: Clerk handles security best practices
+5. **Webhooks**: Verify webhook signatures
+
+## Service Comparison
+
+| Feature | Railway | AWS |
+|---------|---------|-----|
+| Setup Time | ~10 minutes | ~2 hours |
+| Maintenance | Managed | You manage |
+| Cost (small) | ~$30/month | ~$150/month |
+| Scaling | Automatic | Manual/Auto |
+| Complexity | Low | High |
 
 ## Support
 
-For issues or questions:
-- Open a GitHub issue
-- Check CloudWatch logs
-- Review AWS Health Dashboard
+- [Railway Docs](https://docs.railway.app)
+- [Railway Discord](https://discord.gg/railway)
+- [Clerk Docs](https://clerk.dev/docs)
+- [Resend Docs](https://resend.com/docs)

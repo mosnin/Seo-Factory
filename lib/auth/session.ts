@@ -1,25 +1,33 @@
-import {
-  fetchAuthSession,
-  getCurrentUser as amplifyGetCurrentUser,
-} from "aws-amplify/auth";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 export async function getCurrentUser() {
-  try {
-    const user = await amplifyGetCurrentUser();
-    return {
-      userId: user.userId,
-      username: user.username,
-    };
-  } catch {
+  const user = await currentUser();
+
+  if (!user) {
     return null;
   }
+
+  return {
+    userId: user.id,
+    email: user.emailAddresses[0]?.emailAddress ?? null,
+    name: user.firstName
+      ? `${user.firstName} ${user.lastName ?? ""}`.trim()
+      : null,
+    imageUrl: user.imageUrl,
+  };
 }
 
 export async function getAuthToken(): Promise<string | null> {
-  try {
-    const session = await fetchAuthSession();
-    return session.tokens?.idToken?.toString() ?? null;
-  } catch {
-    return null;
+  const { getToken } = await auth();
+  return getToken();
+}
+
+export async function requireAuth() {
+  const { userId } = await auth();
+
+  if (!userId) {
+    throw new Error("Unauthorized");
   }
+
+  return userId;
 }

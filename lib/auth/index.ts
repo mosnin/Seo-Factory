@@ -1,2 +1,1 @@
-export { amplifyConfig } from "./amplify-config";
-export { getCurrentUser, getAuthToken } from "./session";
+export { getCurrentUser, getAuthToken, requireAuth } from "./session";

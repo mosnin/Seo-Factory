@@ -3,6 +3,9 @@ import { AuthProvider } from "@/components/auth/auth-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import "./globals.css";
 
+// Force dynamic rendering for all pages since this is an authenticated app
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "SEO Factory - AI-Powered SEO Content Generation",
   description:

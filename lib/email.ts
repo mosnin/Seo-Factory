@@ -1,4 +1,4 @@
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import { Resend } from "resend";
 import { Queue, Worker, Job } from "bullmq";
 import { redis } from "./redis";
 import { prisma } from "./prisma";
@@ -9,22 +9,23 @@ import { LowCreditsEmail } from "@/emails/low-credits";
 import { PaymentFailedEmail } from "@/emails/payment-failed";
 import { MonthlySummaryEmail } from "@/emails/monthly-summary";
 
-// ── SES Client ────────────────────────────────────────────────────────────────
+// ── Resend Client ────────────────────────────────────────────────────────────
 
-const ses = new SESClient({
-  region:
-    process.env.AWS_SES_REGION ??
-    process.env.NEXT_PUBLIC_COGNITO_REGION ??
-    "us-east-1",
-  ...(process.env.AWS_ACCESS_KEY_ID && {
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-    },
-  }),
-});
+// Lazy initialization to avoid build-time errors when API key isn't available
+let resendClient: Resend | null = null;
 
-const FROM_EMAIL = process.env.SES_FROM_EMAIL ?? "noreply@seofactory.dev";
+function getResend(): Resend {
+  if (!resendClient) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error("RESEND_API_KEY environment variable is not set");
+    }
+    resendClient = new Resend(apiKey);
+  }
+  return resendClient;
+}
+
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "noreply@seofactory.dev";
 const APP_NAME = "SEO Factory";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -90,15 +91,30 @@ export type EmailJobData =
 
 export const EMAIL_QUEUE_NAME = "email-notifications";
 
-export const emailQueue = new Queue<EmailJobData>(EMAIL_QUEUE_NAME, {
-  connection: redis,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: "exponential", delay: 10_000 },
-    removeOnComplete: { count: 500 },
-    removeOnFail: { count: 200 },
+// Lazy initialization to avoid build-time connection attempts
+let emailQueueInstance: Queue<EmailJobData> | null = null;
+
+function getEmailQueue(): Queue<EmailJobData> {
+  if (!emailQueueInstance) {
+    emailQueueInstance = new Queue<EmailJobData>(EMAIL_QUEUE_NAME, {
+      connection: redis,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: "exponential", delay: 10_000 },
+        removeOnComplete: { count: 500 },
+        removeOnFail: { count: 200 },
+      },
+    });
+  }
+  return emailQueueInstance;
+}
+
+// Export for backwards compatibility
+export const emailQueue = {
+  add: async (...args: Parameters<Queue<EmailJobData>["add"]>) => {
+    return getEmailQueue().add(...args);
   },
-});
+};
 
 // ── Template Rendering ────────────────────────────────────────────────────────
 
@@ -173,21 +189,20 @@ async function renderTemplate(
   }
 }
 
-// ── Send via SES ──────────────────────────────────────────────────────────────
+// ── Send via Resend ──────────────────────────────────────────────────────────
 
-async function sendViaSes(to: string, subject: string, html: string) {
-  const command = new SendEmailCommand({
-    Source: `${APP_NAME} <${FROM_EMAIL}>`,
-    Destination: { ToAddresses: [to] },
-    Message: {
-      Subject: { Data: subject, Charset: "UTF-8" },
-      Body: {
-        Html: { Data: html, Charset: "UTF-8" },
-      },
-    },
+async function sendViaResend(to: string, subject: string, html: string) {
+  const resend = getResend();
+  const { error } = await resend.emails.send({
+    from: `${APP_NAME} <${FROM_EMAIL}>`,
+    to: [to],
+    subject,
+    html,
   });
 
-  await ses.send(command);
+  if (error) {
+    throw new Error(`Failed to send email: ${error.message}`);
+  }
 }
 
 // ── Job Processor ─────────────────────────────────────────────────────────────
@@ -213,7 +228,7 @@ async function processEmailJob(job: Job<EmailJobData>) {
 
   const { subject, html } = await renderTemplate(job.data);
 
-  await sendViaSes(to, subject, html);
+  await sendViaResend(to, subject, html);
 
   // Log the sent email
   await prisma.emailLog.create({

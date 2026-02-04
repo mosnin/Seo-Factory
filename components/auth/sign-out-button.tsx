@@ -1,15 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { signOut } from "aws-amplify/auth";
+import { useClerk } from "@clerk/nextjs";
 import { IconLogOut } from "@/components/ui/icons";
 
 export function SignOutButton() {
-  const router = useRouter();
+  const { signOut } = useClerk();
 
   async function handleSignOut() {
-    await signOut();
-    router.push("/auth/signin");
+    await signOut({ redirectUrl: "/auth/signin" });
   }
 
   return (

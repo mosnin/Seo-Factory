@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { signOut } from "aws-amplify/auth";
+import { usePathname } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -39,11 +39,10 @@ interface SidebarProps {
 
 function SidebarNav({ userName, userEmail, credits = 0 }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
+  const { signOut } = useClerk();
 
   async function handleSignOut() {
-    await signOut();
-    router.push("/auth/signin");
+    await signOut({ redirectUrl: "/auth/signin" });
   }
 
   const initials = userName
