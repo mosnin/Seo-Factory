@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { getDbUser } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 
 const completeOnboardingSchema = z.object({
   // Brand voice data
@@ -28,10 +31,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For now, use the first user (in production, extract from auth token)
-    const user = await prisma.user.findFirst();
+    const user = await getDbUser();
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { tone, point_of_view, exemplar_content, industry, keywords } =
@@ -90,17 +92,9 @@ export async function POST(request: NextRequest) {
  */
 export async function GET() {
   try {
-    const user = await prisma.user.findFirst({
-      select: {
-        id: true,
-        name: true,
-        onboardingCompleted: true,
-        creditsBalance: true,
-      },
-    });
-
+    const user = await getDbUser();
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     return NextResponse.json({

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getDbUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +10,9 @@ export async function GET() {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // For now, use first user. In production, extract from auth token.
-    const user = await prisma.user.findFirst();
+    const user = await getDbUser();
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Credits remaining

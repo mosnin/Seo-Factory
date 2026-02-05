@@ -1,1 +1,7 @@
-export { getCurrentUser, getAuthToken, requireAuth } from "./session";
+export {
+  getCurrentUser,
+  getAuthToken,
+  requireAuth,
+  getDbUser,
+  requireDbUser,
+} from "./session";

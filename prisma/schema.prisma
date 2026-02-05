@@ -36,7 +36,7 @@ enum CreditTransactionType {
 
 model User {
   id                   String              @id @default(cuid())
-  cognitoSub           String              @unique
+  clerkId              String              @unique
   email                String              @unique
   name                 String?
   planTier             PlanTier            @default(FREE)

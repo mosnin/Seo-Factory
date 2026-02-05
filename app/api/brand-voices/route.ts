@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { getDbUser } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 
 /* ---------- GET: list brand voices ---------- */
 
 export async function GET() {
   try {
-    const user = await prisma.user.findFirst();
+    const user = await getDbUser();
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const brandVoices = await prisma.brandVoice.findMany({
@@ -56,9 +59,9 @@ const createSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await prisma.user.findFirst();
+    const user = await getDbUser();
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();

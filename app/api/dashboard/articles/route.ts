@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getDbUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +11,9 @@ export async function GET(request: NextRequest) {
     const perPage = Math.min(50, Math.max(1, Number(searchParams.get("per_page") ?? "10")));
     const skip = (page - 1) * perPage;
 
-    // For now, use first user. In production, extract from auth token.
-    const user = await prisma.user.findFirst();
+    const user = await getDbUser();
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const [articles, total] = await Promise.all([

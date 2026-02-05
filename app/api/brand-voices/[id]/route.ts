@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { getDbUser } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 
 /* ---------- GET: single brand voice ---------- */
 
@@ -9,12 +12,17 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const user = await getDbUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const voice = await prisma.brandVoice.findUnique({
       where: { id: params.id },
       include: { _count: { select: { articles: true } } },
     });
 
-    if (!voice) {
+    if (!voice || voice.userId !== user.id) {
       return NextResponse.json(
         { error: "Brand voice not found" },
         { status: 404 }
@@ -61,9 +69,9 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await prisma.user.findFirst();
+    const user = await getDbUser();
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const existing = await prisma.brandVoice.findUnique({
@@ -154,9 +162,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await prisma.user.findFirst();
+    const user = await getDbUser();
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const existing = await prisma.brandVoice.findUnique({

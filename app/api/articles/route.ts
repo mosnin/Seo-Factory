@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { articleQueue, type ArticleJobData } from "@/lib/queue";
 import { LENGTH_PRESETS, type LengthPreset } from "@/lib/constants";
 import { queueEmail } from "@/lib/email";
+import { getDbUser } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
 
 const createArticleSchema = z.object({
   keyword: z
@@ -31,11 +34,10 @@ export async function POST(request: NextRequest) {
     const preset = LENGTH_PRESETS[length_preset as LengthPreset];
     const creditCost = preset.credits;
 
-    // For now, use the first user (in production, extract from auth token)
-    const user = await prisma.user.findFirst();
+    const user = await getDbUser();
     if (!user) {
       return NextResponse.json(
-        { error: "User not found" },
+        { error: "Unauthorized" },
         { status: 401 }
       );
     }
