@@ -3,6 +3,15 @@
 import { ClerkProvider } from "@clerk/nextjs";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  // Check if Clerk is configured - if not, render children without auth wrapper
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+  if (!publishableKey || publishableKey === "pk_test_dummy") {
+    // Clerk not configured - render without auth provider
+    // This allows the app to run for demo/preview purposes
+    return <>{children}</>;
+  }
+
   return (
     <ClerkProvider
       appearance={{
