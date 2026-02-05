@@ -39,6 +39,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Build the application
 RUN npm run build
 
+# Ensure public directory exists (may be empty in some projects)
+RUN mkdir -p public
+
 # ================================
 # Stage 3: Production
 # ================================
