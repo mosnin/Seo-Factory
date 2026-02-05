@@ -1,20 +1,37 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
   "/",
-  "/auth/sign-in(.*)",
-  "/auth/sign-up(.*)",
+  "/auth/signin(.*)",
+  "/auth/signup(.*)",
+  "/auth/reset-password(.*)",
   "/api/webhooks/(.*)",
   "/api/health",
 ]);
 
-export default clerkMiddleware((auth, request) => {
-  // Protect all non-public routes
-  if (!isPublicRoute(request)) {
-    auth().protect();
+// Check if Clerk is configured
+const isClerkConfigured = () => {
+  const key = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  return key && key !== "pk_test_dummy" && key.startsWith("pk_");
+};
+
+// Middleware that handles both configured and unconfigured Clerk states
+export default function middleware(request: NextRequest) {
+  // If Clerk is not configured, allow all requests (demo mode)
+  if (!isClerkConfigured()) {
+    return NextResponse.next();
   }
-});
+
+  // Clerk is configured - use Clerk middleware
+  return clerkMiddleware((auth, req) => {
+    if (!isPublicRoute(req)) {
+      auth().protect();
+    }
+  })(request, {} as never);
+}
 
 export const config = {
   matcher: [
