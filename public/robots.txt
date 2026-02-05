@@ -1,0 +1,6 @@
+# SEO Factory - Robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap (uncomment when available)
+# Sitemap: https://yourdomain.com/sitemap.xml
